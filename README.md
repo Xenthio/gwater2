@@ -97,6 +97,26 @@ Custom shaders were created in HLSL, compiled using [ShaderCompile](https://gith
 
 TODO-->
 
+# Architecture
+
+**GWater2** is built around two abstract C++ interfaces that decouple the fluid simulation from both the physics backend and the rendering pipeline.
+
+### Simulation backends (`ISolverInterface`)
+The interface is defined in `binary/src/solver_interface.h` and exposes a backend-agnostic API for spawning particles, ticking the simulation, and querying results.
+
+| Backend | Status | Description |
+|---------|--------|-------------|
+| **FleX** (`--backend=flex`) | ✅ Default | Original [Nvidia FleX](https://github.com/NVIDIAGameWorks/FleX) GPU particle solver — implemented in `flex_solver.cpp` |
+| **PhysX 5** (`--backend=physx5`) | 🔬 Prototype | [Nvidia PhysX 5](https://github.com/NVIDIA-Omniverse/PhysX) PBD particle system — stub in `physx5_solver.cpp`. Maps FleX concepts to `PxPBDParticleSystem`. |
+
+### Rendering pipelines (`IRendererInterface`)
+The interface is defined in `binary/src/renderer_interface.h` and receives per-frame particle snapshots from the solver.
+
+| Renderer | Status | Description |
+|----------|--------|-------------|
+| **Source Engine** (`--renderer=source`) | ✅ Default | IMesh-based billboard renderer using injected HLSL shaders |
+| **Vulkan** (`--renderer=vulkan`) | 🔬 Prototype | External screen-space fluid renderer (inspired by [Gelly](https://github.com/gelly-gmod/gelly)). Renders particles off-screen via Vulkan and composites the result back into Source Engine through a shared DX11/Vulkan texture on Windows and a DMA-buf on Linux — stub in `vulkan_renderer.cpp`. |
+
 # Compilation
 
 ### Module compilation
@@ -123,6 +143,8 @@ If you wish to compile it yourself, simply follow these steps.
 	- Linux users would do `./premake5 gmake`
 	- [List of supported build systems](https://premake.github.io/docs/Using-Premake#using-premake-to-generate-project-files)
 		- I am honestly unsure how new your build system needs to be. I'd personally just make sure to use vs2015 or later
+	- Use `--backend=physx5` to build the PhysX 5 prototype instead of FleX (requires the PhysX 5 SDK, see `binary/src/physx5_solver.cpp`)
+	- Use `--renderer=vulkan` to build the Vulkan renderer prototype instead of the Source Engine renderer (requires the Vulkan SDK)
 4. Now, build the project like normal.
    - On Windows, open the .sln file, go to the top taskbar, Build -> Build Solution
    - On Linux, run `make config=release_x86_64`
